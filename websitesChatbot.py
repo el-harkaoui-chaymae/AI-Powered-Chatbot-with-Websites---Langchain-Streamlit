@@ -6,9 +6,9 @@ import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.document_loaders import WebBaseLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-
-
+from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
 
 
 
@@ -29,14 +29,25 @@ def respond(user_text):
 
 
 
-# get text from website in document form
+# Storing
 def get_vectorstore_from_url(url):
+    
+    # get text from website in document form
     loader = WebBaseLoader(url)
     document = loader.load()
+    
     # split the doc into chunks
     text_splitter = RecursiveCharacterTextSplitter()
     document_chunks = text_splitter.split_documents(document)
-    return document_chunks
+
+    # use the chunks to create a vectorstore
+    # vector_store = Chroma.from_documents(document_chunks,OpenAIEmbeddings())
+
+    # Use Hugging Face embeddings
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    vector_store = Chroma.from_documents(document_chunks, embeddings, persist_directory=None)
+
+    return vector_store
 
 
 
@@ -60,10 +71,9 @@ if website_url is None or website_url == "" :
 
 else : 
    
-   # extracting the all HTML text from the page
-   document_chunks = get_vectorstore_from_url(website_url)
-   with st.sidebar:
-       st.write(document_chunks)
+   # vector store
+   vector_store = get_vectorstore_from_url(website_url)
+ 
 
    # add a prompt textarea
    user_text = st.chat_input("Enter your text here")
